@@ -2,12 +2,11 @@
   GEO1015.2020
   hw02 
   --
-  [YOUR NAME] 
-  [YOUR STUDENT NUMBER] 
-  [YOUR NAME] 
-  [YOUR STUDENT NUMBER] 
+  Guilherme Spinoza Andreo
+  5383994 
+  Ondrej Vesely
+  5162130
 */
-
 
 #include <iostream>
 #include <fstream>

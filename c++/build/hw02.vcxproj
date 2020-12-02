@@ -316,14 +316,6 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClCompile Include="D:\DELFT\Q2 GEO1015 DTM\assignment2\c++\src\DatasetASC.cpp" />
     <ClCompile Include="D:\DELFT\Q2 GEO1015 DTM\assignment2\c++\src\main.cpp" />
   </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="D:\DELFT\Q2 GEO1015 DTM\assignment2\c++\build\ZERO_CHECK.vcxproj">
-      <Project>{5E53ACC2-78D8-3270-86D9-43DF44F32413}</Project>
-      <Name>ZERO_CHECK</Name>
-      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </ProjectReference>
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
