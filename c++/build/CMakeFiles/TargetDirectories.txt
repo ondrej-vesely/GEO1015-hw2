@@ -1,0 +1,3 @@
+D:/DELFT/Q2 GEO1015 DTM/assignment2/c++/build/CMakeFiles/hw02.dir
+D:/DELFT/Q2 GEO1015 DTM/assignment2/c++/build/CMakeFiles/ALL_BUILD.dir
+D:/DELFT/Q2 GEO1015 DTM/assignment2/c++/build/CMakeFiles/ZERO_CHECK.dir

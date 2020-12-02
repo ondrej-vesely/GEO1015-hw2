@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="D:\DELFT\Q2 GEO1015 DTM\assignment2\c++\build\CMakeFiles\bf5e5e8fdf1ec24a7df2d321abfb111b\generate.stamp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{8F0A2B29-9E91-3B2F-AED5-3B8A0216157C}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
