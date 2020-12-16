@@ -7,11 +7,21 @@
 
 import sys
 import math
-import numpy
+import numpy as np
 import rasterio
 from rasterio import features
 
+def create_circle_exterior_mask(h, w, center, radius):
+    Y, X = np.ogrid[:h, :w]
+    dist_from_center = np.sqrt((X - center[0])**2 + (Y-center[1])**2)
+    mask = dist_from_center > radius
+    return mask
 
+def create_circle_outline_mask(h, w, center, radius, thickness=math.sqrt(2)):
+    Y, X = np.ogrid[:h, :w]
+    dist_from_center = np.sqrt((X - center[0])**2 + (Y-center[1])**2)
+    mask = (radius-thickness) < dist_from_center <= radius
+    return mask
 
 def output_viewshed(d, viewpoints, maxdistance, output_file):
     """
@@ -32,27 +42,48 @@ def output_viewshed(d, viewpoints, maxdistance, output_file):
     # [this code can and should be removed/modified/reutilised]
     # [it's just there to help you]
 
-    #-- numpy of input
-    npi  = d.read(1)
+    # numpy of the input
+    terrain  = d.read(1)
+    # numpy of the output
+    output = np.zeros(d.shape, dtype=np.int8)
+
+    # pixel size
+    pixel_size = d.transform[0]
+
+
     #-- fetch the 1st viewpoint
     v = viewpoints[0]
     #-- index of this point in the numpy raster
     vrow, vcol = d.index(v[0], v[1])
-    #-- the results of the viewshed in npvs, all values=0
-    npvs = numpy.zeros(d.shape, dtype=numpy.int8)
     #-- put that pixel with value 2
-    npvs[vrow , vcol] = 2
-    #-- write this to disk
+    output[vrow, vcol] = 2
 
+    # set points outside of radius to value 3
+    mask_union = True
+    for v in viewpoints:
+        vrow, vcol = d.index(v[0], v[1])
+        mask = create_circle_exterior_mask(d.shape[0], d.shape[1], 
+                                          (vcol, vrow), maxdistance/pixel_size)
+        mask_union = np.logical_and(mask, mask_union)      
+    np.putmask(output, mask_union, 3)
+
+    # set viewpoint pixel to value 2
+    for v in viewpoints:
+        vrow, vcol = d.index(v[0], v[1])
+        output[vrow, vcol] = 2
+
+
+    
+    # finally write numpy raster array as tif
     with rasterio.open(output_file, 'w', 
                        driver='GTiff', 
-                       height=npi.shape[0],
-                       width=npi.shape[1], 
+                       height=terrain.shape[0],
+                       width=terrain.shape[1], 
                        count=1, 
                        dtype=rasterio.uint8,
                        crs=d.crs, 
                        transform=d.transform) as dst:
-        dst.write(npvs.astype(rasterio.uint8), 1)
+        dst.write(output.astype(rasterio.uint8), 1)
 
     print("Viewshed file written to '%s'" % output_file)
 
