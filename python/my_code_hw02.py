@@ -11,40 +11,42 @@ import numpy as np
 import rasterio
 from rasterio import features
 
-def distance_matrix(h, w, center):
+def dist_matrix(h, w, center):
     Y, X = np.ogrid[:h, :w]
     dist_from_center = np.sqrt((X - center[0])**2 + (Y-center[1])**2)
+    # get rid of zero distance
+    dist_from_center[center[1], center[0]] = 0.0000001
     return dist_from_center
 
 def circle_exterior_mask(h, w, center, radius):
-    dist_from_center = distance_matrix(h, w, center)
+    dist_from_center = dist_matrix(h, w, center)
     mask = dist_from_center > radius
     return mask
 
 def circle_outline_mask(h, w, center, radius, thickness=math.sqrt(2)):
-    dist_from_center = distance_matrix(h, w, center)
+    dist_from_center = dist_matrix(h, w, center)
     mask = np.logical_and( (radius-thickness) < dist_from_center, 
                             dist_from_center <= radius )
     return mask
 
 def bresenham_line_mask(h, w, x1, y1, x2, y2):
-    l = {"type":"LineString", "coordinates":[(x1, y1), (x2, y2)]}
-    mask = features.rasterize([(l, 1)], out_shape= (h, w))
+    l = [({"type":"LineString", "coordinates":[(x1, y1), (x2, y2)]}, 1)]
+    mask = features.rasterize(l, out_shape=(h, w), all_touched=True)
     mask[x2, y2] = 1
     return mask
 
 def bresenham_circle_coords(x0, y0, radius):
     coords = set()
+    radius = round(radius)
     f = 1 - radius
     ddf_x = 1
     ddf_y = -2 * radius
     x = 0
     y = radius
-    coords.add(x0, y0 + radius)
-    coords.add(x0, y0 - radius)
-    coords.add(x0 + radius, y0)
-    coords.add(x0 - radius, y0)
- 
+    coords.add((x0, y0 + radius))
+    coords.add((x0, y0 - radius))
+    coords.add((x0 + radius, y0))
+    coords.add((x0 - radius, y0))
     while x < y:
         if f >= 0: 
             y -= 1
@@ -53,14 +55,15 @@ def bresenham_circle_coords(x0, y0, radius):
         x += 1
         ddf_x += 2
         f += ddf_x    
-        coords.add(x0 + x, y0 + y)
-        coords.add(x0 - x, y0 + y)
-        coords.add(x0 + x, y0 - y)
-        coords.add(x0 - x, y0 - y)
-        coords.add(x0 + y, y0 + x)
-        coords.add(x0 - y, y0 + x)
-        coords.add(x0 + y, y0 - x)
-        coords.add(x0 - y, y0 - x)
+        coords.add((x0 + x, y0 + y))
+        coords.add((x0 - x, y0 + y))
+        coords.add((x0 + x, y0 - y))
+        coords.add((x0 - x, y0 - y))
+        coords.add((x0 + y, y0 + x))
+        coords.add((x0 - y, y0 + x))
+        coords.add((x0 + y, y0 - x))
+        coords.add((x0 - y, y0 - x))
+    return coords
 
 def output_viewshed(d, viewpoints, maxdistance, output_file):
     """
@@ -81,35 +84,33 @@ def output_viewshed(d, viewpoints, maxdistance, output_file):
     # [this code can and should be removed/modified/reutilised]
     # [it's just there to help you]
 
-    # numpy of the input
+    # raster of the input
     terrain  = d.read(1)
-    # numpy of the output
+    # raster of the output
     output = np.zeros(d.shape, dtype=np.int8)
-    # pixel size
+    # get dimensions in raster space
     pixel_size = d.transform[0]
+    pixel_radius = maxdistance/pixel_size
+
 
 
     for v in viewpoints:
-        # get raster coords and height
+        # get raster space coords and height
         vrow, vcol = d.index(v[0], v[1])
         vheight = terrain[vrow, vcol] + v[2]
 
+        # precalculate distance matrix
+        distance_matrix = dist_matrix(*d.shape, (vcol, vrow))
+        # # precalculate tangent matrix
+        tangent_matrix = (terrain - vheight) / distance_matrix
+
         # get points on circle
-        circle = circle_outline_mask  (d.shape[0], d.shape[1], 
-                                      (vcol, vrow), maxdistance/pixel_size)
-        
-        crow, ccol = np.where(circle)
-        cpoints = zip(ccol, crow)
-        
+        cpoints = bresenham_circle_coords(vcol, vrow, pixel_radius)
         # try line drawing
         y1, x1 = vcol, vcol
         for x2, y2 in cpoints:
             line = bresenham_line_mask(*d.shape, x1, y1, x2, y2)
             np.putmask(output, line, 4)
-
-
-
-
 
    
    
@@ -119,7 +120,7 @@ def output_viewshed(d, viewpoints, maxdistance, output_file):
     for v in viewpoints:
         vrow, vcol = d.index(v[0], v[1])
         mask = circle_outline_mask  (d.shape[0], d.shape[1], 
-                                    (vcol, vrow), maxdistance/pixel_size)
+                                    (vcol, vrow), pixel_radius)
         radius_mask = np.logical_or(mask, radius_mask)      
     np.putmask(output, radius_mask, 5)
 
@@ -129,7 +130,7 @@ def output_viewshed(d, viewpoints, maxdistance, output_file):
     for v in viewpoints:
         vrow, vcol = d.index(v[0], v[1])
         mask = circle_exterior_mask (d.shape[0], d.shape[1], 
-                                    (vcol, vrow), maxdistance/pixel_size)
+                                    (vcol, vrow), pixel_radius)
         exterior_mask = np.logical_and(mask, exterior_mask)      
     np.putmask(output, exterior_mask, 3)
 
