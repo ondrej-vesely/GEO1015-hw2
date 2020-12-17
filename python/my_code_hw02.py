@@ -5,8 +5,6 @@
 # -- Guilherme Spinoza Andreo
 #-- 5383994
 
-import sys
-import math
 import numpy as np
 import rasterio
 from rasterio import features
@@ -20,7 +18,6 @@ def circle_exterior_mask(h, w, center, radius):
 def bresenham_line_mask(h, w, x1, y1, x2, y2):
     l = [({"type": "LineString", "coordinates": [(x1, y1), (x2, y2)]}, 1)]
     mask = features.rasterize(l, out_shape=(h, w), all_touched=True)
-    mask[y2, x2] = 1
     return mask
 
 def bresenham_circle_coords(x0, y0, radius):
