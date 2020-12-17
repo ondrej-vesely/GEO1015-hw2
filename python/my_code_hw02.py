@@ -1,13 +1,14 @@
-#-- my_code_hw02.py
+# -- my_code_hw02.py
 # -- Assignment 02 GEO1015.2020
 # -- Ondrej Vesely
-#-- 5162130
+# -- 5162130
 # -- Guilherme Spinoza Andreo
-#-- 5383994
+# -- 5383994
 
 import numpy as np
 import rasterio
 from rasterio import features
+
 
 def circle_exterior_mask(h, w, center, radius):
     Y, X = np.ogrid[:h, :w]
@@ -26,8 +27,7 @@ def bresenham_circle_coords(x0, y0, radius):
     f = 1 - radius
     ddf_x = 1
     ddf_y = -2 * radius
-    x = 0
-    y = radius
+    x, y = 0, radius
     coords.add((x0, y0 + radius))
     coords.add((x0, y0 - radius))
     coords.add((x0 + radius, y0))
@@ -53,8 +53,6 @@ def bresenham_circle_coords(x0, y0, radius):
 
 def output_viewshed(d, viewpoints, maxdistance, output_file):
     """
-    !!! TO BE COMPLETED !!!
-
     Function that writes the output raster
 
     Input:
@@ -66,9 +64,9 @@ def output_viewshed(d, viewpoints, maxdistance, output_file):
     Output:
         none (but output GeoTIFF file written to 'output-file')
     """
-    # raster of the input
+    # np raster input
     terrain = d.read(1)
-    # raster of the output
+    # np raster output
     output = np.zeros(d.shape, dtype=np.int8)
     # get dimensions in raster space
     pixel_size = d.transform[0]
@@ -79,15 +77,15 @@ def output_viewshed(d, viewpoints, maxdistance, output_file):
         vrow, vcol = d.index(v[0], v[1])
         vheight = terrain[vrow, vcol] + v[2]
 
-        # get points on circle circumference
-        # and draw a bresenham lines towards them
+        # get points on bresenham circle
+        # and draw bresenham lines towards them
         x1, y1 = vcol, vrow
         for x2, y2 in bresenham_circle_coords(x1, y1, pixel_radius+1):
             line = bresenham_line_mask(*d.shape, x1, y1, x2, y2)
 
             # get each lines points
             pts = np.argwhere(line)
-            # and their projected distance 
+            # and their distance projected on line's vector
             vect = np.array((y2-y1, x2-x1))
             vect_norm = vect / np.linalg.norm(vect)
             dist = np.dot(pts - (y1, x1), vect_norm)
@@ -96,7 +94,7 @@ def output_viewshed(d, viewpoints, maxdistance, output_file):
             pts, dist = pts[order], dist[order]
             # calculate each points tangent
             tang =  (terrain[pts.T[0], pts.T[1]] - vheight) / dist           
-            # apply incremental tangent line of sight algo
+            # apply incremental tangent line of sight algorithm
             max_t = float('-inf')
             for i, t in enumerate(tang):
                 if t >= max_t:
