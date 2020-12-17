@@ -20,7 +20,7 @@ def circle_exterior_mask(h, w, center, radius):
 def bresenham_line_mask(h, w, x1, y1, x2, y2):
     l = [({"type": "LineString", "coordinates": [(x1, y1), (x2, y2)]}, 1)]
     mask = features.rasterize(l, out_shape=(h, w), all_touched=True)
-    mask[x2, y2] = 1
+    mask[y2, x2] = 1
     return mask
 
 def bresenham_circle_coords(x0, y0, radius):
@@ -77,7 +77,6 @@ def output_viewshed(d, viewpoints, maxdistance, output_file):
     pixel_size = d.transform[0]
     pixel_radius = maxdistance/pixel_size
     
-    
     for v in viewpoints:
         # get viewpoint coords and height
         vrow, vcol = d.index(v[0], v[1])
@@ -88,25 +87,25 @@ def output_viewshed(d, viewpoints, maxdistance, output_file):
         x1, y1 = vcol, vrow
         for x2, y2 in bresenham_circle_coords(x1, y1, pixel_radius+1):
             line = bresenham_line_mask(*d.shape, x1, y1, x2, y2)
-            
-            # get each lines points, their distance and sort them
-            y, x = np.where(line)
-            dist = np.sqrt((x - x1)**2 + (y-y1)**2)
-            order = dist.argsort()
-            x, y, dist = x[order], y[order], dist[order]
 
+            # get each lines points
+            pts = np.argwhere(line)
+            # and their projected distance 
+            vect = np.array((y2-y1, x2-x1))
+            vect_norm = vect / np.linalg.norm(vect)
+            dist = np.dot(pts - (y1, x1), vect_norm)
+            # sort them based on distance and remove starting point
+            order = dist.argsort()[1:]
+            pts, dist = pts[order], dist[order]
             # calculate each points tangent
-            dist[0] = 0.0001  # get rid of zero div
-            tang = (terrain[y, x] - vheight) / dist 
-            
-            # apply tangent line of sight algo
+            tang =  (terrain[pts.T[0], pts.T[1]] - vheight) / dist           
+            # apply incremental tangent line of sight algo
             max_t = float('-inf')
             for i, t in enumerate(tang):
                 if t >= max_t:
-                    output[y[i],x[i]] = tang
+                    output[pts[i][0], pts[i][1]] = 1
                     max_t = t
-
-
+        
     # set viewpoint pixels to value 2
     for v in viewpoints:
         vrow, vcol = d.index(v[0], v[1])
@@ -120,7 +119,6 @@ def output_viewshed(d, viewpoints, maxdistance, output_file):
                                     (vcol, vrow), pixel_radius)
         exterior_mask = np.logical_and(mask, exterior_mask)
     np.putmask(output, exterior_mask, 3)
-
  
     # finally write numpy raster array as tif
     with rasterio.open(output_file, 'w',
