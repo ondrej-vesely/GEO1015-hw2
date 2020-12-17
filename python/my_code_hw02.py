@@ -24,21 +24,12 @@ def create_circle_outline_mask(h, w, center, radius, thickness=math.sqrt(2)):
                             dist_from_center <= radius )
     return mask
 
-def bresenham_line(x1, y1, x2, y2):  
-    """Return tuples of coords on bresenham line"""
-    result = []
-    m_new = 2 * (y2 - y1)  
-    slope_error_new = m_new - (x2 - x1) 
-    y=y1 
-    for x in range(x1,x2+1):  
-        result.append((x,y))
-        # Add slope to increment angle formed  
-        slope_error_new =slope_error_new + m_new  
-        # Slope error reached limit, time to  
-        # increment y and update slope error.  
-        if (slope_error_new >= 0):  
-            y=y+1
-            slope_error_new =slope_error_new - 2 * (x2 - x1) 
+def bresenham_line(h, w, x1, y1, x2, y2):
+    l = {"type":"LineString", "coordinates":[(x1, y1), (x2, y2)]}
+    mask = features.rasterize([(l, 1)], out_shape= (h, w))
+    mask[x2, y2] = 1
+    return mask
+
 
 
 def output_viewshed(d, viewpoints, maxdistance, output_file):
@@ -69,20 +60,19 @@ def output_viewshed(d, viewpoints, maxdistance, output_file):
     pixel_size = d.transform[0]
 
 
-    #-- fetch the 1st viewpoint
-    v = viewpoints[0]
-    #-- index of this point in the numpy raster
-    vrow, vcol = d.index(v[0], v[1])
-
-
-    # set pixels outside of radius to value 1
+   
+   
+   
+   
+    # set pixels outside of radius to value 5
     radius_mask = False
     for v in viewpoints:
         vrow, vcol = d.index(v[0], v[1])
         mask = create_circle_outline_mask(d.shape[0], d.shape[1], 
                                           (vcol, vrow), maxdistance/pixel_size)
         radius_mask = np.logical_or(mask, radius_mask)      
-    np.putmask(output, radius_mask, 1)
+    np.putmask(output, radius_mask, 5)
+
 
     # set pixels outside of radius to value 3
     exterior_mask = True
